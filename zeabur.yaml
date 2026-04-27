@@ -1,0 +1,4 @@
+build:
+  builder: nixpacks
+deploy:
+  start_command: python main.py
