@@ -35,9 +35,8 @@ def _build_driver(profile: DeviceProfile) -> webdriver.Chrome:
     """Return a headless Chrome WebDriver configured for the device profile."""
     options = Options()
 
-    if config.HEADLESS:
-        options.add_argument("--headless=new")
-
+    # Always use headless in server environments (like Zeabur/Nixpacks)
+    options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
@@ -59,8 +58,18 @@ def _build_driver(profile: DeviceProfile) -> webdriver.Chrome:
     options.add_experimental_option("useAutomationExtension", False)
     options.add_argument("--disable-blink-features=AutomationControlled")
 
-    service = Service()  # relies on chromedriver being on PATH (Replit provides it)
-    driver = webdriver.Chrome(service=service, options=options)
+    # In Nixpacks, chromedriver and chromium are in the path. 
+    # webdriver-manager can also be used if needed, but Service() usually finds it if it's on PATH.
+    try:
+        service = Service()
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception as e:
+        logger.warning("Default service failed, trying webdriver-manager: %s", e)
+        from webdriver_manager.chrome import ChromeDriverManager
+        from webdriver_manager.core.os_manager import ChromeType
+        service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
+        driver = webdriver.Chrome(service=service, options=options)
+
     driver.implicitly_wait(config.IMPLICIT_WAIT)
     driver.set_page_load_timeout(config.PAGE_LOAD_TIMEOUT)
     return driver
