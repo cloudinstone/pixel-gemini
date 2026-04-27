@@ -58,16 +58,15 @@ def _build_driver(profile: DeviceProfile) -> webdriver.Chrome:
     options.add_experimental_option("useAutomationExtension", False)
     options.add_argument("--disable-blink-features=AutomationControlled")
 
-    # In Nixpacks, chromedriver and chromium are in the path. 
-    # webdriver-manager can also be used if needed, but Service() usually finds it if it's on PATH.
+    # In Docker/Linux environment, use the pre-installed chromium
     try:
-        service = Service()
+        # Default path for chromium-driver on Debian/Ubuntu
+        service = Service("/usr/bin/chromedriver")
+        options.binary_location = "/usr/bin/chromium"
         driver = webdriver.Chrome(service=service, options=options)
     except Exception as e:
-        logger.warning("Default service failed, trying webdriver-manager: %s", e)
-        from webdriver_manager.chrome import ChromeDriverManager
-        from webdriver_manager.core.os_manager import ChromeType
-        service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
+        logger.warning("System chromium failed, trying fallback: %s", e)
+        service = Service()
         driver = webdriver.Chrome(service=service, options=options)
 
     driver.implicitly_wait(config.IMPLICIT_WAIT)
